@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>故事章节视频提示词生成器</title>
+  <script>
+    if (window.location.protocol === "file:") {
+      window.location.replace("http://127.0.0.1:8787/");
+    }
+  </script>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="shell">
+    <section class="workspace">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">MiniMax H3 Local Studio</p>
+          <h1 id="pageTitle">故事章节视频生成器</h1>
+          <p class="muted version-line">本地版本：2026-08-21 API排错版</p>
+        </div>
+        <button class="icon-button" id="clearBtn" type="button" title="清空">
+          <span aria-hidden="true">×</span>
+          <span class="sr-only">清空</span>
+        </button>
+      </header>
+
+      <section class="input-band" id="inputBand" aria-label="故事输入">
+        <div class="api-grid api-grid-four">
+          <label>
+            <span id="apiKeyLabel">MiniMax API Key</span>
+            <input id="apiKeyInput" type="password" autocomplete="off" placeholder="sk-..." value="">
+          </label>
+          <label>
+            <span>API 域名</span>
+            <select id="apiHostSelect">
+              <option value="api.minimaxi.com" selected>api.minimaxi.com</option>
+              <option value="api.minimax.io">api.minimax.io</option>
+            </select>
+          </label>
+          <label>
+            <span id="modelLabel">模型</span>
+            <input id="modelInput" type="text" value="MiniMax-H3">
+          </label>
+          <label>
+            <span id="resolutionLabel">分辨率</span>
+            <select id="resolutionSelect">
+              <option value="768P">768P</option>
+              <option value="2K">2K</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="file-row">
+          <label class="file-picker">
+            <input id="fileInput" type="file" accept=".txt,text/plain">
+            <span id="filePickerText">选择 TXT 文件</span>
+          </label>
+          <span id="fileName" class="muted">也可以直接粘贴文本</span>
+        </div>
+        <textarea id="storyInput" placeholder="把完整故事粘贴到这里，或导入 .txt 文件。支持“第1章 / 第一章 / Chapter 1 / ### 标题”等章节标记。"></textarea>
+
+        <div class="image-upload" id="imageDrop">
+          <div>
+            <strong id="imageTitle">人物参考图片</strong>
+            <p id="imageHint" class="muted">拖入或选择最多 4 张人物图片。每个章节和片段都会使用同一组人物参考图。</p>
+          </div>
+          <label class="file-picker">
+            <input id="imageInput" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif" multiple>
+            <span id="imagePickerText">选择图片</span>
+          </label>
+          <input id="slotImageInput" class="hidden-file-input" type="file" accept="image/png,image/jpeg,image/webp,image/heic,image/heif">
+          <div id="imagePreviewGrid" class="image-preview-grid" aria-label="人物图片预览"></div>
+        </div>
+      </section>
+
+      <section class="controls" id="controls" aria-label="分章设置">
+        <div class="control">
+          <span class="label" id="languageLabel">输出语言</span>
+          <div class="segmented" role="radiogroup" aria-label="输出语言">
+            <label><input type="radio" name="outputLanguage" value="zh" checked><span>中文</span></label>
+            <label><input type="radio" name="outputLanguage" value="en"><span>English</span></label>
+          </div>
+        </div>
+
+        <div class="control">
+          <label id="totalMinutesLabel" for="totalMinutes">故事总时长</label>
+          <div class="number-field">
+            <input id="totalMinutes" type="number" min="1" max="240" value="20">
+            <span id="minutesUnit">分钟</span>
+          </div>
+        </div>
+
+        <div class="control">
+          <label id="chapterCountLabel" for="chapterCount">输出章节数</label>
+          <div class="number-field">
+            <input id="chapterCount" type="number" min="1" max="30" value="1">
+            <span id="chaptersUnit">章</span>
+          </div>
+        </div>
+
+        <div class="control">
+          <label id="clipCountLabel" for="clipCountSelect">每章视频段数</label>
+          <select id="clipCountSelect">
+            <option value="1">1段</option>
+            <option value="2" selected>2段</option>
+            <option value="3">3段</option>
+            <option value="4">4段</option>
+            <option value="5">5段</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <span class="label" id="splitModeLabel">切分方式</span>
+          <div class="segmented" role="radiogroup" aria-label="切分方式">
+            <label><input type="radio" name="splitMode" value="chapter" checked><span id="splitChapterText">识别原章节</span></label>
+            <label><input type="radio" name="splitMode" value="auto"><span id="splitAutoText">语义分章</span></label>
+          </div>
+        </div>
+
+        <div class="control">
+          <label id="styleLabel" for="styleSelect">画面风格</label>
+          <select id="styleSelect">
+            <option value="cinematic" data-zh="电影感写实，细腻光影，人物表演自然" data-en="cinematic realism, nuanced lighting, natural character performance">电影感写实</option>
+            <option value="period" data-zh="古风电影质感，柔和自然光，服化道精致" data-en="period-drama cinematic style, soft natural light, refined costumes and props">古风叙事</option>
+            <option value="thriller" data-zh="悬疑惊悚电影感，低调光，紧张氛围" data-en="suspense thriller look, low-key lighting, tense atmosphere">悬疑惊悚</option>
+            <option value="warm" data-zh="温暖治愈系影像，浅景深，柔和色彩" data-en="warm healing visual style, shallow depth of field, gentle colors">温暖治愈</option>
+            <option value="scifi" data-zh="科幻电影质感，未来城市光影，高细节" data-en="science-fiction cinematic style, futuristic city lighting, high detail">科幻未来</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <label id="characterLabel" for="characterSelect">人物类型</label>
+          <select id="characterSelect">
+            <option value="asian" data-zh="主要人物为亚洲人外貌，黑发深色眼睛，自然真实，不改变故事设定" data-en="main characters have Asian appearance, black hair and dark eyes, natural and realistic, without changing the story setting">亚洲人</option>
+            <option value="black" data-zh="主要人物为黑人外貌，深色肤色，自然真实，不改变故事设定" data-en="main characters have Black appearance, dark skin, natural and realistic, without changing the story setting">黑人</option>
+            <option value="western" data-zh="主要人物为金发碧眼洋人外貌，自然真实，不改变故事设定" data-en="main characters have Western blond hair and blue eyes, natural and realistic, without changing the story setting">金发碧眼洋人</option>
+          </select>
+        </div>
+
+        <div class="control">
+          <label id="categoryLabel" for="categorySelect">故事分类</label>
+          <select id="categorySelect">
+            <option value="horror" data-zh="恐怖故事：环境恐怖阴森，冷色调、破旧房间、黑暗走廊、雾气、诡异阴影、压迫感强；人物可以表现惊恐、苍白、被灵异力量影响；画面可以尽量使用鬼魂、幽灵、怨灵、半透明人影等恐怖图像，但保持电影感和故事一致性" data-en="Horror story: eerie and gloomy environments, cold color palette, abandoned rooms, dark corridors, fog, uncanny shadows, strong oppressive mood; characters may look frightened, pale, or affected by supernatural forces; use ghosts, spirits, vengeful apparitions, translucent figures, and other horror imagery whenever suitable while keeping cinematic quality and story continuity">恐怖故事</option>
+            <option value="romance" data-zh="爱情故事：环境浪漫细腻，柔和光影、城市夜景、雨中相遇、温暖室内、海边或花园等场景；人物关系要突出心动、靠近、误会、思念、拥抱或告别等情绪，画面温柔、有张力、有电影感" data-en="Romance story: romantic and delicate environments, soft lighting, city nights, rainy encounters, warm interiors, seaside or garden scenes; emphasize attraction, closeness, misunderstanding, longing, embraces, or farewells, with gentle but emotionally charged cinematic visuals">爱情故事</option>
+          </select>
+        </div>
+
+        <button id="generateBtn" class="primary" type="button">生成摘要和提示词</button>
+        <button id="generateAllVideosBtn" class="secondary" type="button" disabled>生成全部视频</button>
+        <button id="testApiBtn" class="secondary" type="button">测试 API Key</button>
+        <label class="check-line">
+          <input id="firstImageOnly" type="checkbox">
+          <span>排错：只提交第 1 张人物图测试 API</span>
+        </label>
+      </section>
+
+      <section class="progress-wrap" aria-label="处理进度">
+        <div class="progress-meta">
+          <span id="progressLabel">等待输入</span>
+          <span id="progressCount">0%</span>
+        </div>
+        <div class="progress-track">
+          <div id="progressBar" class="progress-bar"></div>
+        </div>
+        <div class="task-lookup">
+          <input id="taskLookupInput" type="text" placeholder="输入 task id 查询视频结果">
+          <button id="taskLookupBtn" class="secondary" type="button">查询任务</button>
+          <span id="taskLookupResult" class="muted"></span>
+        </div>
+      </section>
+
+      <section class="results-head">
+        <div>
+          <h2 id="resultsTitle">输出结果</h2>
+          <p id="resultHint" class="muted">每章生成 1-5 段 10 秒视频，所有段都使用同一组人物参考图保持人物统一。</p>
+        </div>
+        <button id="exportBtn" class="secondary" type="button" disabled>导出 TXT</button>
+      </section>
+
+      <section id="results" class="results" aria-live="polite"></section>
+    </section>
+  </main>
+
+  <template id="cardTemplate">
+    <article class="result-card">
+      <div class="card-title">
+        <strong class="segment-title"></strong>
+        <span class="segment-meta"></span>
+      </div>
+      <label>
+        <span class="field-head">
+          <span class="summary-label">章节总结</span>
+          <button class="copy-btn copy-summary" type="button">复制</button>
+        </span>
+        <textarea class="summary-field"></textarea>
+      </label>
+      <label>
+        <span class="field-head">
+          <span class="prompt-label">MiniMax H3 视频提示词</span>
+          <button class="copy-btn copy-prompt" type="button">复制</button>
+        </span>
+        <textarea class="prompt-field"></textarea>
+      </label>
+      <div class="video-actions">
+        <button class="primary generate-video" type="button">生成本章视频</button>
+        <span class="task-status muted"></span>
+      </div>
+      <div class="video-list"></div>
+    </article>
+  </template>
+
+  <script src="app.js?v=20260821-xhr-local-log"></script>
+</body>
+</html>
